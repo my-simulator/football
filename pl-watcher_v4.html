@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+
+<!-- iOSホーム画面追加時にURLバー等を出さずスタンドアロン表示にする -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PL Watcher">
+<meta name="theme-color" content="#0A1410">
+<meta name="format-detection" content="telephone=no">
+
+<title>PL Watcher</title>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230A1410'/%3E%3Ccircle cx='50' cy='50' r='30' fill='none' stroke='%23E4B655' stroke-width='5'/%3E%3Cpath d='M50 26 L60 34 L56 46 L44 46 L40 34 Z' fill='%23E4B655'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#0A1410;
+    --bg-2:#0E1B15;
+    --card:#132922;
+    --card-2:#18332A;
+    --line:#22392F;
+    --text:#EAF2EC;
+    --text-dim:#8DA79A;
+    --text-faint:#5C7267;
+    --gold:#E4B655;
+    --gold-soft:#C9A24C;
+    --live:#E2574C;
+    --watched:#57A583;
+    --danger:#E2574C;
+    --sat-blue:#6FA3D6;
+    --sun-red:#E2574C;
+    --safe-top:env(safe-area-inset-top);
+    --safe-bottom:env(safe-area-inset-bottom);
+  }
+
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+    overscroll-behavior-y:none;
+  }
+
+  body{
+    background:
+      radial-gradient(ellipse 900px 500px at 50% -10%, rgba(228,182,85,0.09), transparent 60%),
+      linear-gradient(180deg, var(--bg-2) 0%, var(--bg) 320px);
+  }
+
+  #app{
+    max-width:520px;
+    margin:0 auto;
+    min-height:100vh;
+    padding-top:calc(var(--safe-top) + 18px);
+    padding-bottom:calc(var(--safe-bottom) + 92px);
+    position:relative;
+  }
+
+  .num{ font-variant-numeric: tabular-nums; }
+  .wd-sat{ color:var(--sat-blue) !important; }
+  .wd-sun{ color:var(--sun-red) !important; }
+
+  /* ---------- header ---------- */
+  .topbar{
+    display:flex; align-items:baseline; justify-content:space-between;
+    padding:0 20px 18px;
+  }
+  .brand{
+    font-size:19px; font-weight:800; letter-spacing:.01em;
+    display:flex; align-items:center; gap:8px;
+  }
+  .brand .crest{
+    width:22px; height:22px; border-radius:6px;
+    background:linear-gradient(155deg, var(--gold) 0%, var(--gold-soft) 100%);
+    display:inline-flex; align-items:center; justify-content:center;
+    font-size:12px;
+  }
+  .brand-sub{ font-size:11px; color:var(--text-faint); letter-spacing:.04em; }
+
+  /* ---------- section label (used sparingly, sentence case) ---------- */
+  .section-label{
+    font-size:13px; color:var(--text-dim); font-weight:600;
+    padding:0 20px; margin:28px 0 12px;
+  }
+
+  /* ---------- hero next match card ---------- */
+  .hero{
+    margin:0 16px;
+    background:linear-gradient(165deg, var(--card-2) 0%, var(--card) 70%);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:22px 20px 20px;
+    position:relative;
+    overflow:hidden;
+  }
+  .hero::before{
+    content:"";
+    position:absolute; top:-60px; right:-60px; width:180px; height:180px;
+    background:radial-gradient(circle, rgba(228,182,85,0.16), transparent 70%);
+    pointer-events:none;
+  }
+  .hero-tag{
+    display:flex; align-items:center; gap:8px;
+    font-size:12px; font-weight:700; color:var(--gold);
+    margin-bottom:14px;
+  }
+  .hero-tag .dot{
+    width:6px; height:6px; border-radius:50%;
+    background:var(--gold); box-shadow:0 0 0 3px rgba(228,182,85,0.18);
+  }
+  .hero-tag.live{ color:var(--live); }
+  .hero-tag.live .dot{ background:var(--live); box-shadow:0 0 0 3px rgba(226,87,76,0.22); animation:pulse 1.6s infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.4;} }
+
+  .hero-date{ font-size:13px; color:var(--text-dim); margin-bottom:2px; display:flex; align-items:center; gap:8px; }
+  .rel-tag{
+    font-size:11px; font-weight:700; color:var(--gold);
+    background:rgba(228,182,85,0.14); padding:2px 8px; border-radius:20px;
+  }
+  .holiday-flag{
+    font-size:11px; font-weight:700; color:var(--sun-red);
+    background:rgba(226,87,76,0.14); padding:2px 8px; border-radius:20px;
+  }
+  .cal-panel-head{ display:flex; align-items:center; gap:8px; }
+  .time-icon{ margin-right:5px; }
+  .star-player{ font-size:11.5px; color:var(--gold-soft); font-weight:600; margin-top:2px; }
+  .star-player-row{
+    display:flex; align-items:baseline; gap:6px;
+    font-size:11.5px; color:var(--gold-soft); font-weight:600; margin-top:2px;
+  }
+  .star-player-row .sp-l{ flex:1; min-width:0; text-align:center; }
+  .star-player-row .sp-r{ flex:1; min-width:0; text-align:center; }
+
+  .matchup{
+    display:flex; align-items:flex-start; justify-content:center;
+    gap:14px; margin:14px 0 16px; text-align:center;
+  }
+  .team-col{ flex:1; display:flex; flex-direction:column; align-items:center; min-width:0; }
+  .team-name{
+    font-size:21px; font-weight:800; letter-spacing:-.01em;
+    line-height:1.15; word-break:break-word;
+  }
+  .vs{
+    font-size:12px; color:var(--text-faint); font-weight:700;
+    padding-top:2px; align-self:center;
+  }
+
+  .kickoff-row{
+    display:flex; align-items:baseline; justify-content:center; gap:10px;
+    margin-bottom:16px;
+  }
+  .kickoff-time{ font-size:34px; font-weight:800; letter-spacing:-.02em; }
+  .kickoff-jst{ font-size:11px; color:var(--text-faint); }
+
+  .countdown{
+    text-align:center; margin-bottom:18px;
+  }
+  .countdown-label{ font-size:12px; color:var(--text-dim); margin-bottom:4px; }
+  .countdown-value{ font-size:20px; font-weight:800; color:var(--gold); }
+  .countdown-value.live{ color:var(--live); }
+
+  .memo-line{
+    text-align:center; font-size:12.5px; color:var(--text-dim);
+    margin:-6px 0 16px;
+  }
+
+  .hero-actions{ display:flex; gap:10px; }
+
+  .btn{
+    border:none; border-radius:13px; padding:13px 16px;
+    font-size:15px; font-weight:700;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    cursor:pointer;
+  }
+  .btn-primary{ background:var(--gold); color:#1A1305; flex:1; }
+  .btn-primary:active{ transform:scale(0.98); }
+  .btn-ghost{ background:transparent; color:var(--text-dim); border:1px solid var(--line); }
+  .btn-ghost:active{ background:rgba(255,255,255,0.04); }
+  .btn-block{ width:100%; }
+  .btn-danger{ background:rgba(226,87,76,0.14); color:var(--danger); }
+
+  /* ---------- empty state ---------- */
+  .empty{
+    margin:0 16px; padding:40px 24px; text-align:center;
+    border:1px dashed var(--line); border-radius:20px;
+    color:var(--text-dim);
+  }
+  .empty .icon{ font-size:30px; margin-bottom:10px; }
+  .empty .msg{ font-size:14.5px; line-height:1.6; margin-bottom:18px; }
+
+  /* ---------- upcoming list on home ---------- */
+  .upcoming-row{
+    display:flex; align-items:center; gap:14px;
+    padding:13px 20px; border-bottom:1px solid var(--line);
+  }
+  .upcoming-row:active{ background:rgba(255,255,255,0.03); }
+  .upcoming-date{
+    width:56px; flex:none; font-size:12px; color:var(--text-dim); line-height:1.3;
+  }
+  .upcoming-date b{ display:block; font-size:15px; color:var(--text); font-weight:700; }
+  .upcoming-date .rel-tag{ font-size:9.5px; padding:1px 6px; margin-top:2px; display:inline-block; }
+  .upcoming-teams{ flex:1; font-size:14.5px; font-weight:600; line-height:1.35; min-width:0; }
+  .upcoming-teams .ut-row{ display:flex; align-items:center; gap:4px; }
+  .upcoming-teams .ut-team{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .upcoming-teams .ut-home{ text-align:center; }
+  .upcoming-teams .ut-away{ text-align:center; }
+  .upcoming-teams .t2{ color:var(--text-dim); font-weight:500; }
+  .upcoming-time{ font-size:13px; color:var(--text-faint); flex:none; }
+
+  .see-all{
+    text-align:center; padding:14px; font-size:13.5px; color:var(--gold);
+    font-weight:700;
+  }
+  .see-all:active{ opacity:.7; }
+
+  /* ---------- match list screen ---------- */
+  .month-heading{
+    padding:20px 20px 8px; font-size:13px; font-weight:700; color:var(--text-dim);
+  }
+  .list-card{ margin:0 16px 14px; }
+  .match-row{
+    background:var(--card);
+    border:1px solid var(--line);
+    padding:14px 16px;
+    display:flex; align-items:center; gap:12px;
+  }
+  .match-row:first-child{ border-radius:16px 16px 0 0; }
+  .match-row:last-child{ border-radius:0 0 16px 16px; border-top:none; }
+  .match-row:only-child{ border-radius:16px; }
+  .match-row + .match-row{ border-top:none; }
+  .match-row:active{ background:var(--card-2); }
+
+  .mr-date{
+    width:54px; flex:none; text-align:center;
+  }
+  .mr-date .d{ font-size:16px; font-weight:800; }
+  .mr-date .w{ font-size:10.5px; color:var(--text-faint); }
+  .mr-date .rel-tag{ font-size:9px; padding:1px 5px; margin-top:3px; display:inline-block; }
+
+  .mr-body{ flex:1; min-width:0; }
+  .mr-teams{ font-size:14.5px; font-weight:700; margin-bottom:3px; display:flex; align-items:center; gap:6px; }
+  .mr-teams .mrt-team{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .mr-teams .mrt-home{ text-align:center; }
+  .mr-teams .mrt-away{ text-align:center; }
+  .mr-teams .vs2{ color:var(--text-faint); font-weight:500; margin:0 4px; }
+  .mr-meta{ font-size:12px; color:var(--text-dim); display:flex; align-items:center; gap:6px; }
+
+  .badge{
+    font-size:11px; font-weight:700; padding:3px 8px; border-radius:20px;
+    flex:none; white-space:nowrap;
+  }
+  .badge-plan{ background:rgba(228,182,85,0.15); color:var(--gold); }
+  .badge-watched{ background:rgba(87,165,131,0.16); color:var(--watched); }
+  .badge-live{ background:rgba(226,87,76,0.16); color:var(--live); }
+
+  .mr-status{
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    flex:none;
+  }
+  .mr-status-time{ font-size:12px; color:var(--text-dim); }
+
+  /* ---------- segmented tab (list / calendar) ---------- */
+  .seg{
+    display:flex; gap:6px; margin:0 16px 16px;
+    background:var(--card); border:1px solid var(--line);
+    border-radius:14px; padding:4px;
+  }
+  .seg-btn{
+    flex:1; border:none; background:none; color:var(--text-dim);
+    font-size:13.5px; font-weight:700; padding:9px 0; border-radius:10px;
+    cursor:pointer;
+  }
+  .seg-btn.active{ background:var(--card-2); color:var(--gold); }
+
+  /* ---------- calendar ---------- */
+  .cal-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 16px 14px;
+  }
+  .cal-title{ font-size:16px; font-weight:800; }
+  .cal-nav{
+    width:34px; height:34px; border-radius:10px;
+    background:var(--card); border:1px solid var(--line); color:var(--text);
+    font-size:17px; font-weight:700; cursor:pointer;
+  }
+  .cal-nav:active{ background:var(--card-2); }
+  .cal-weekdays{
+    display:grid; grid-template-columns:repeat(7,1fr);
+    padding:0 16px; margin-bottom:6px;
+  }
+  .cal-weekdays div{
+    text-align:center; font-size:11px; color:var(--text-faint); font-weight:600;
+  }
+  .cal-grid{
+    display:grid; grid-template-columns:repeat(7,1fr);
+    gap:4px; padding:0 16px 4px;
+  }
+  .cal-cell{
+    aspect-ratio:1; border-radius:12px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+    background:var(--card); border:1px solid transparent;
+    cursor:pointer;
+  }
+  .cal-cell.blank{ background:none; cursor:default; }
+  .cal-cell:active:not(.blank){ background:var(--card-2); }
+  .cal-cell.today{ border-color:var(--gold-soft); }
+  .cal-cell.selected{ background:var(--card-2); border-color:var(--gold); }
+  .cal-daynum{ font-size:13.5px; font-weight:700; }
+  .cal-cell.today .cal-daynum{ color:var(--gold); }
+  .cal-dots{ display:flex; gap:2px; }
+  .cal-dot{ width:5px; height:5px; border-radius:50%; }
+  .cal-dot.plan{ background:var(--gold); }
+  .cal-dot.live{ background:var(--live); }
+  .cal-dot.watched{ background:var(--watched); }
+
+  .cal-panel{ margin:18px 16px 0; }
+  .cal-panel-head{ font-size:13px; font-weight:700; color:var(--text-dim); margin-bottom:10px; }
+  .cal-empty{
+    padding:20px; text-align:center; color:var(--text-dim); font-size:13.5px;
+    border:1px dashed var(--line); border-radius:14px; margin-bottom:12px;
+  }
+
+  /* ---------- form screen ---------- */
+  .form-wrap{ padding:4px 20px 20px; }
+  .field{ margin-bottom:20px; }
+  .field label{
+    display:block; font-size:13px; font-weight:700; color:var(--text-dim);
+    margin-bottom:8px;
+  }
+  .field input[type=text], .field input[type=date], .field input[type=time], .field textarea{
+    width:100%; background:var(--card); border:1px solid var(--line);
+    border-radius:12px; padding:13px 14px; font-size:16px; color:var(--text);
+    font-family:inherit;
+  }
+  .field input:focus, .field textarea:focus{ outline:2px solid var(--gold-soft); outline-offset:1px; }
+  .field textarea{ resize:vertical; min-height:64px; }
+  .vs-divider{
+    text-align:center; font-size:12px; color:var(--text-faint); margin:-8px 0 20px; font-weight:700;
+  }
+
+  .toggle-row{
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:13px 14px; margin-bottom:20px;
+  }
+  .toggle-row .tt{ font-size:14.5px; font-weight:600; }
+  .toggle-row .ts{ font-size:12px; color:var(--text-dim); margin-top:2px; }
+  .switch{
+    width:46px; height:28px; border-radius:20px; background:var(--line);
+    position:relative; flex:none; transition:background .15s;
+  }
+  .switch.on{ background:var(--gold); }
+  .switch .knob{
+    position:absolute; top:3px; left:3px; width:22px; height:22px; border-radius:50%;
+    background:#fff; transition:left .15s;
+  }
+  .switch.on .knob{ left:21px; }
+
+  .form-actions{ display:flex; gap:10px; margin-top:8px; }
+
+  /* ---------- nav bar ---------- */
+  .navbar{
+    position:fixed; left:0; right:0; bottom:0;
+    display:flex; justify-content:center;
+    background:linear-gradient(180deg, rgba(10,20,16,0) 0%, var(--bg) 30%);
+    padding-top:14px;
+    z-index:10;
+  }
+  .navbar-inner{
+    width:100%; max-width:520px;
+    margin:0 16px; padding:10px 10px calc(10px + var(--safe-bottom));
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:20px;
+    display:flex;
+    box-shadow:0 10px 30px rgba(0,0,0,0.35);
+  }
+  .nav-btn{
+    flex:1; background:none; border:none; color:var(--text-faint);
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    padding:8px 4px; font-size:11px; font-weight:600; cursor:pointer;
+  }
+  .nav-btn .ic{ font-size:19px; }
+  .nav-btn.active{ color:var(--gold); }
+
+  /* ---------- confirm dialog ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(4,8,6,0.6);
+    display:flex; align-items:flex-end; justify-content:center;
+    z-index:50;
+  }
+  .sheet{
+    width:100%; max-width:520px; background:var(--card-2);
+    border:1px solid var(--line); border-bottom:none;
+    border-radius:20px 20px 0 0;
+    padding:22px 20px calc(22px + var(--safe-bottom));
+    text-align:center;
+  }
+  .sheet .q{ font-size:15.5px; font-weight:700; margin-bottom:4px; }
+  .sheet .sub{ font-size:13px; color:var(--text-dim); margin-bottom:20px; }
+  .sheet-actions{ display:flex; gap:10px; }
+
+  .toast{
+    position:fixed; left:50%; bottom:calc(100px + var(--safe-bottom));
+    transform:translateX(-50%);
+    background:var(--card-2); border:1px solid var(--line);
+    color:var(--text); font-size:13.5px; font-weight:600;
+    padding:11px 18px; border-radius:30px; z-index:60;
+    box-shadow:0 8px 24px rgba(0,0,0,0.4);
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+(function(){
+  "use strict";
+
+  var STORAGE_KEY = "pl_watcher_matches_v1";
+  var TAGS_STORAGE_KEY = "pl_watcher_star_players_v1";
+  var YOUBI = ["日","月","火","水","木","金","土"];
+
+  var state = {
+    matches: [],
+    tags: [],
+    ui: {
+      screen: "home", editId: null, confirmDeleteId: null, toast: null,
+      listTab: "list", calYear: null, calMonth: null, calSelected: null, prefillDate: null,
+      confirmDeleteTagId: null
+    }
+  };
+
+  // ---------------- persistence ----------------
+  function load(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      state.matches = raw ? JSON.parse(raw) : [];
+    }catch(e){ state.matches = []; }
+    try{
+      var rawTags = localStorage.getItem(TAGS_STORAGE_KEY);
+      state.tags = rawTags ? JSON.parse(rawTags) : [];
+    }catch(e){ state.tags = []; }
+  }
+  function save(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state.matches)); }catch(e){}
+  }
+  function saveTags(){
+    try{ localStorage.setItem(TAGS_STORAGE_KEY, JSON.stringify(state.tags)); }catch(e){}
+  }
+
+  // ---------------- helpers ----------------
+  function escapeHtml(str){
+    return String(str == null ? "" : str).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+  function attrJs(str){
+    // safely embed a string into an inline data attribute value
+    return escapeHtml(String(str == null ? "" : str));
+  }
+  function uid(){
+    return "m" + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+  }
+  function pad2(n){ return (n < 10 ? "0" : "") + n; }
+
+  function kickoffDate(m){
+    // matchDate: YYYY-MM-DD, matchTime: HH:MM, always JST
+    // これは実時刻(now)との比較に使う実際の瞬間なので、+09:00オフセットで正しく計算する
+    return new Date(m.matchDate + "T" + m.matchTime + ":00+09:00");
+  }
+
+  // カレンダー表示用: "YYYY-MM-DD" を年月日の整数にそのまま分解する。
+  // タイムゾーン変換を挟まないので、入力した日付とズレることがない。
+  function parseYMD(dateStr){
+    var p = dateStr.split("-");
+    return { y: parseInt(p[0], 10), m: parseInt(p[1], 10), d: parseInt(p[2], 10) };
+  }
+  function fmtMD(dateStr){
+    var p = parseYMD(dateStr);
+    var w = new Date(Date.UTC(p.y, p.m - 1, p.d)).getUTCDay();
+    return { m: p.m, d: p.d, w: YOUBI[w], wi: w };
+  }
+  function weekdayClass(wi){
+    if (wi === 6) return " wd-sat";
+    if (wi === 0) return " wd-sun";
+    return "";
+  }
+
+  // ---------------- 日本の祝日（計算のみ・外部通信なし） ----------------
+  // ハッピーマンデー(第n月曜)・春分/秋分(天文計算の近似式)・振替休日に対応。
+  // 「国民の休日」(祝日に挟まれた平日、例:敬老の日と秋分の日の間の日)は未対応。
+  var holidayCache = {};
+  function nthWeekday(y, m, targetDow, nth){
+    var first = new Date(Date.UTC(y, m - 1, 1));
+    var offset = (targetDow - first.getUTCDay() + 7) % 7;
+    return 1 + offset + (nth - 1) * 7;
+  }
+  function vernalEquinox(y){
+    return Math.floor(20.8431 + 0.242194 * (y - 1980) - Math.floor((y - 1980) / 4));
+  }
+  function autumnalEquinox(y){
+    return Math.floor(23.2488 + 0.242194 * (y - 1980) - Math.floor((y - 1980) / 4));
+  }
+  function holidaysOfYear(y){
+    if (holidayCache[y]) return holidayCache[y];
+    var base = [
+      [1, 1, "元日"],
+      [1, nthWeekday(y, 1, 1, 2), "成人の日"],
+      [2, 11, "建国記念の日"],
+      [3, vernalEquinox(y), "春分の日"],
+      [4, 29, "昭和の日"],
+      [5, 3, "憲法記念日"],
+      [5, 4, "みどりの日"],
+      [5, 5, "こどもの日"],
+      [7, nthWeekday(y, 7, 1, 3), "海の日"],
+      [8, 11, "山の日"],
+      [9, nthWeekday(y, 9, 1, 3), "敬老の日"],
+      [9, autumnalEquinox(y), "秋分の日"],
+      [10, nthWeekday(y, 10, 1, 2), "スポーツの日"],
+      [11, 3, "文化の日"],
+      [11, 23, "勤労感謝の日"]
+    ];
+    if (y >= 2020) base.push([2, 23, "天皇誕生日"]);
+
+    var map = {};
+    base.forEach(function(h){ map[y + "-" + pad2(h[0]) + "-" + pad2(h[1])] = h[2]; });
+
+    // 振替休日: 祝日が日曜の場合、その後の最初の平日(祝日でない日)を振替休日にする
+    base.forEach(function(h){
+      var d0 = new Date(Date.UTC(y, h[0] - 1, h[1]));
+      if (d0.getUTCDay() !== 0) return;
+      var nd = d0;
+      do {
+        nd = new Date(nd.getTime() + 86400000);
+      } while (map[nd.getUTCFullYear() + "-" + pad2(nd.getUTCMonth() + 1) + "-" + pad2(nd.getUTCDate())]);
+      map[nd.getUTCFullYear() + "-" + pad2(nd.getUTCMonth() + 1) + "-" + pad2(nd.getUTCDate())] = "振替休日";
+    });
+
+    holidayCache[y] = map;
+    return map;
+  }
+  function holidayName(dateStr){
+    var p = parseYMD(dateStr);
+    return holidaysOfYear(p.y)[dateStr] || null;
+  }
+  // 曜日＋祝日を合わせた色クラス（祝日は日曜と同じ赤にする）
+  function dayClass(dateStr){
+    if (holidayName(dateStr)) return " wd-sun";
+    var p = parseYMD(dateStr);
+    var wi = new Date(Date.UTC(p.y, p.m - 1, p.d)).getUTCDay();
+    return weekdayClass(wi);
+  }
+
+  // 時間帯アイコン: 23:00-03:59=深夜 / 04:00-11:59=早朝 / 12:00-17:59=昼〜夕方 / 18:00-22:59=夜
+  function timeIcon(timeStr){
+    var h = parseInt(timeStr.split(":")[0], 10);
+    if (h >= 23 || h < 4) return "🌙";
+    if (h < 12) return "🌅";
+    if (h < 18) return "☀️";
+    return "🌆";
+  }
+
+  // 相対日付タグ: 今日 / 明日 / 今週
+  function dayDiff(a, b){
+    return Math.round((Date.UTC(b.y, b.m - 1, b.d) - Date.UTC(a.y, a.m - 1, a.d)) / 86400000);
+  }
+  function relTag(dateStr){
+    var diff = dayDiff(todayJST(), parseYMD(dateStr));
+    if (diff === 0) return "今日";
+    if (diff === 1) return "明日";
+    if (diff >= 2 && diff <= 6) return "今週";
+    return null;
+  }
+  function fmtYM(dateStr){
+    var p = parseYMD(dateStr);
+    return p.y + "年" + p.m + "月";
+  }
+  function ymKey(dateStr){
+    var p = parseYMD(dateStr);
+    return p.y + "-" + pad2(p.m);
+  }
+  function daysInMonth(y, m){
+    return new Date(Date.UTC(y, m, 0)).getUTCDate();
+  }
+  function firstWeekday(y, m){
+    return new Date(Date.UTC(y, m - 1, 1)).getUTCDay();
+  }
+  // 実際の「今日」を日本時間の年月日として取得する
+  function todayJST(){
+    var now = new Date();
+    var utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+    var jst = new Date(utcMs + 9 * 3600000);
+    return { y: jst.getUTCFullYear(), m: jst.getUTCMonth() + 1, d: jst.getUTCDate() };
+  }
+
+  // ---------------- team name (Japanese display) ----------------
+  var TEAM_JA = {
+    "arsenal": "アーセナル",
+    "aston villa": "アストン・ヴィラ",
+    "bournemouth": "ボーンマス",
+    "afc bournemouth": "ボーンマス",
+    "brentford": "ブレントフォード",
+    "brighton": "ブライトン",
+    "brighton & hove albion": "ブライトン",
+    "brighton and hove albion": "ブライトン",
+    "chelsea": "チェルシー",
+    "coventry city": "コヴェントリー・シティ",
+    "crystal palace": "クリスタル・パレス",
+    "everton": "エヴァートン",
+    "fulham": "フラム",
+    "hull city": "ハル・シティ",
+    "ipswich town": "イプスウィッチ・タウン",
+    "ipswich": "イプスウィッチ・タウン",
+    "leeds united": "リーズ・ユナイテッド",
+    "leeds": "リーズ・ユナイテッド",
+    "liverpool": "リヴァプール",
+    "manchester city": "マンチェスター・シティ",
+    "man city": "マンチェスター・シティ",
+    "manchester united": "マンチェスター・ユナイテッド",
+    "man united": "マンチェスター・ユナイテッド",
+    "man utd": "マンチェスター・ユナイテッド",
+    "newcastle united": "ニューカッスル・ユナイテッド",
+    "newcastle": "ニューカッスル・ユナイテッド",
+    "nottingham forest": "ノッティンガム・フォレスト",
+    "nott'm forest": "ノッティンガム・フォレスト",
+    "sunderland": "サンダーランド",
+    "tottenham hotspur": "トッテナム・ホットスパー",
+    "tottenham": "トッテナム・ホットスパー",
+    "spurs": "トッテナム・ホットスパー"
+  };
+  function teamDisplay(name){
+    if (!name) return name;
+    var key = String(name).trim().toLowerCase();
+    return TEAM_JA[key] || name;
+  }
+
+  // ---------------- 注目選手タグ ----------------
+  // チーム名(表示名で正規化)ごとに選手名を紐づける。試合ごとの再入力は不要。
+  function canonicalTeamKey(name){
+    return teamDisplay(name).trim();
+  }
+  function playersForTeam(name){
+    if (!name) return [];
+    var key = canonicalTeamKey(name);
+    return state.tags
+      .filter(function(t){ return canonicalTeamKey(t.team) === key; })
+      .map(function(t){ return t.player; });
+  }
+  function starPlayerLine(name){
+    var players = playersForTeam(name);
+    if (!players.length) return "";
+    return '<div class="star-player">⭐ ' + escapeHtml(players.join("・")) + '</div>';
+  }
+  // 一覧・カレンダー・今後の観戦予定用: ホーム側は左寄せ、アウェイ側は右寄せで
+  // どちらのチームの注目選手かひと目でわかるようにする
+  function starPlayersRow(m){
+    var home = playersForTeam(m.homeTeam);
+    var away = playersForTeam(m.awayTeam);
+    if (!home.length && !away.length) return "";
+    var left = home.length ? "⭐ " + escapeHtml(home.join("・")) : "";
+    var right = away.length ? escapeHtml(away.join("・")) + " ⭐" : "";
+    return '<div class="star-player-row"><span class="sp-l">' + left + '</span><span class="sp-r">' + right + '</span></div>';
+  }
+
+  function countdownParts(target, now){
+    var diffMs = target.getTime() - now.getTime();
+    if (diffMs <= 0) return null;
+    var totalMin = Math.floor(diffMs / 60000);
+    var days = Math.floor(totalMin / 1440);
+    var hours = Math.floor((totalMin % 1440) / 60);
+    var mins = totalMin % 60;
+    return { days: days, hours: hours, mins: mins };
+  }
+  function countdownText(target, now){
+    var p = countdownParts(target, now);
+    if (!p) return null;
+    var out = "あと ";
+    if (p.days > 0) out += p.days + "日 ";
+    if (p.days > 0 || p.hours > 0) out += p.hours + "時間 ";
+    out += p.mins + "分";
+    return out;
+  }
+
+  var LIVE_WINDOW_MS = 3 * 60 * 60 * 1000; // 3時間を「試合中」とみなす目安
+
+  function matchStatus(m, now){
+    if (m.isWatched) return "watched";
+    var ko = kickoffDate(m).getTime();
+    var n = now.getTime();
+    if (n < ko) return "planned";
+    if (n - ko < LIVE_WINDOW_MS) return "live";
+    return "overdue";
+  }
+
+  function sortedMatches(){
+    return state.matches.slice().sort(function(a,b){
+      return kickoffDate(a) - kickoffDate(b);
+    });
+  }
+
+  function pickNextMatch(now){
+    var unwatched = sortedMatches().filter(function(m){ return !m.isWatched; });
+    var live = unwatched.filter(function(m){ return matchStatus(m, now) === "live"; });
+    if (live.length) return live[0];
+    var upcoming = unwatched.filter(function(m){ return matchStatus(m, now) === "planned"; });
+    if (upcoming.length) return upcoming[0];
+    var overdue = unwatched.filter(function(m){ return matchStatus(m, now) === "overdue"; });
+    if (overdue.length) return overdue[overdue.length - 1];
+    return null;
+  }
+
+  // ---------------- render: home ----------------
+  function renderHome(now){
+    var next = pickNextMatch(now);
+    var html = "";
+
+    if (!next){
+      html += '<div class="empty">'
+        + '<div class="icon">⚽</div>'
+        + '<div class="msg">まだ観戦予定の試合が登録されていません。<br>次に見る試合を登録しましょう。</div>'
+        + '<button class="btn btn-primary btn-block" data-action="nav" data-screen="form">試合を登録する</button>'
+        + '</div>';
+    } else {
+      var status = matchStatus(next, now);
+      var md = fmtMD(next.matchDate);
+      var isLive = (status === "live");
+      var isOverdue = (status === "overdue");
+      var rel = relTag(next.matchDate);
+      var hol = holidayName(next.matchDate);
+
+      html += '<div class="hero">';
+      html += '<div class="hero-tag' + (isLive ? ' live' : '') + '"><span class="dot"></span>'
+        + (isLive ? "試合中" : (isOverdue ? "結果待ち" : "NEXT MATCH")) + '</div>';
+      html += '<div class="hero-date">' + md.m + '月' + md.d + '日（<span class="' + dayClass(next.matchDate).trim() + '">' + md.w + '</span>）'
+        + (hol ? '<span class="holiday-flag">' + escapeHtml(hol) + '</span>' : '')
+        + (rel ? '<span class="rel-tag">' + rel + '</span>' : '') + '</div>';
+
+      html += '<div class="matchup">'
+        + '<div class="team-col"><div class="team-name">' + escapeHtml(teamDisplay(next.homeTeam)) + '</div>' + starPlayerLine(next.homeTeam) + '</div>'
+        + '<div class="vs">VS</div>'
+        + '<div class="team-col"><div class="team-name">' + escapeHtml(teamDisplay(next.awayTeam)) + '</div>' + starPlayerLine(next.awayTeam) + '</div>'
+        + '</div>';
+
+      html += '<div class="kickoff-row">'
+        + '<span class="time-icon">' + timeIcon(next.matchTime) + '</span>'
+        + '<span class="kickoff-time num">' + escapeHtml(next.matchTime) + '</span>'
+        + '<span class="kickoff-jst">JST</span>'
+        + '</div>';
+
+      if (isLive){
+        html += '<div class="countdown"><div class="countdown-value live">試合中</div></div>';
+      } else if (isOverdue){
+        html += '<div class="countdown"><div class="countdown-value">観戦済みか確認してください</div></div>';
+      } else {
+        html += '<div class="countdown">'
+          + '<div class="countdown-value num">' + escapeHtml(countdownText(kickoffDate(next), now)) + '</div>'
+          + '</div>';
+      }
+
+      if (next.memo){
+        html += '<div class="memo-line">' + escapeHtml(next.memo) + '</div>';
+      }
+
+      html += '<div class="hero-actions">'
+        + '<button class="btn btn-primary" data-action="mark-watched" data-id="' + attrJs(next.id) + '">観戦済みにする</button>'
+        + '<button class="btn btn-ghost" data-action="edit" data-id="' + attrJs(next.id) + '">編集</button>'
+        + '</div>';
+      html += '</div>';
+    }
+
+    // 今後の観戦予定
+    var now2 = now;
+    var rest = sortedMatches().filter(function(m){
+      return !m.isWatched && matchStatus(m, now2) === "planned" && (!next || m.id !== next.id);
+    }).slice(0, 5);
+
+    if (rest.length){
+      html += '<div class="section-label">今後の観戦予定</div>';
+      html += '<div>';
+      rest.forEach(function(m){
+        var md = fmtMD(m.matchDate);
+        var rel = relTag(m.matchDate);
+        var hol = holidayName(m.matchDate);
+        html += '<div class="upcoming-row" data-action="edit" data-id="' + attrJs(m.id) + '">'
+          + '<div class="upcoming-date">' + md.m + '/' + md.d + '<b class="' + dayClass(m.matchDate).trim() + '">' + md.w + '曜' + (hol ? ' 祝' : '') + '</b>'
+          + (rel ? '<span class="rel-tag">' + rel + '</span>' : '') + '</div>'
+          + '<div class="upcoming-teams"><div class="ut-row"><span class="ut-team ut-home">' + escapeHtml(teamDisplay(m.homeTeam)) + '</span><span class="t2">vs</span><span class="ut-team ut-away">' + escapeHtml(teamDisplay(m.awayTeam)) + '</span></div>' + starPlayersRow(m) + '</div>'
+          + '<div class="upcoming-time num">' + timeIcon(m.matchTime) + ' ' + escapeHtml(m.matchTime) + '</div>'
+          + '</div>';
+      });
+      html += '</div>';
+      html += '<div class="see-all" data-action="nav" data-screen="list">すべて見る</div>';
+    }
+
+    return html;
+  }
+
+  // ---------------- render: list ----------------
+  function renderListTabs(){
+    var tab = state.ui.listTab || "list";
+    return '<div class="seg">'
+      + '<button class="seg-btn' + (tab === "list" ? " active" : "") + '" data-action="list-tab" data-tab="list">リスト</button>'
+      + '<button class="seg-btn' + (tab === "cal" ? " active" : "") + '" data-action="list-tab" data-tab="cal">カレンダー</button>'
+      + '</div>';
+  }
+
+  function matchRowHtml(m, now, dateLabel){
+    var status = matchStatus(m, now);
+    var badge = '<span class="badge badge-watched">✓ 観戦済み</span>';
+    if (status === "live") badge = '<span class="badge badge-live">● 試合中</span>';
+    else if (status === "planned" || status === "overdue") badge = '<span class="badge badge-plan">● 観戦予定</span>';
+    return '<div class="match-row" data-action="edit" data-id="' + attrJs(m.id) + '">'
+      + dateLabel
+      + '<div class="mr-body">'
+      + '<div class="mr-teams"><span class="mrt-team mrt-home">' + escapeHtml(teamDisplay(m.homeTeam)) + '</span><span class="vs2">vs</span><span class="mrt-team mrt-away">' + escapeHtml(teamDisplay(m.awayTeam)) + '</span></div>'
+      + starPlayersRow(m)
+      + '</div>'
+      + '<div class="mr-status">' + badge + '<span class="mr-status-time num">' + timeIcon(m.matchTime) + ' ' + escapeHtml(m.matchTime) + '</span></div>'
+      + '</div>';
+  }
+
+  function renderList(now){
+    var all = sortedMatches();
+    var html = renderListTabs();
+
+    if (!all.length){
+      html += '<div class="empty">'
+        + '<div class="icon">📋</div>'
+        + '<div class="msg">登録された試合がありません。</div>'
+        + '<button class="btn btn-primary btn-block" data-action="nav" data-screen="form">試合を登録する</button>'
+        + '</div>';
+      return html;
+    }
+
+    if ((state.ui.listTab || "list") === "cal"){
+      html += renderCalendar(now);
+      return html;
+    }
+
+    var groups = {};
+    var order = [];
+    all.forEach(function(m){
+      var key = ymKey(m.matchDate);
+      if (!groups[key]){ groups[key] = []; order.push(key); }
+      groups[key].push(m);
+    });
+
+    order.forEach(function(key){
+      var list = groups[key];
+      html += '<div class="month-heading">' + fmtYM(list[0].matchDate) + '</div>';
+      html += '<div class="list-card">';
+      list.forEach(function(m){
+        var md = fmtMD(m.matchDate);
+        var rel = relTag(m.matchDate);
+        var hol = holidayName(m.matchDate);
+        var dc = dayClass(m.matchDate);
+        var dateLabel = '<div class="mr-date"><div class="d num' + dc + '">' + md.d + '</div><div class="w' + dc + '">' + md.w + '曜' + (hol ? ' 祝' : '') + '</div>'
+          + (rel ? '<span class="rel-tag">' + rel + '</span>' : '') + '</div>';
+        html += matchRowHtml(m, now, dateLabel);
+      });
+      html += '</div>';
+    });
+    return html;
+  }
+
+  // ---------------- render: calendar ----------------
+  function renderCalendar(now){
+    if (!state.ui.calYear){
+      var t = todayJST();
+      state.ui.calYear = t.y;
+      state.ui.calMonth = t.m;
+    }
+    var y = state.ui.calYear, mo = state.ui.calMonth;
+    var dim = daysInMonth(y, mo);
+    var startWd = firstWeekday(y, mo);
+    var t2 = todayJST();
+
+    var byDate = {};
+    state.matches.forEach(function(m){
+      (byDate[m.matchDate] = byDate[m.matchDate] || []).push(m);
+    });
+
+    var html = '<div class="cal-head">'
+      + '<button class="cal-nav" data-action="cal-prev">‹</button>'
+      + '<div class="cal-title">' + y + '年' + mo + '月</div>'
+      + '<button class="cal-nav" data-action="cal-next">›</button>'
+      + '</div>';
+
+    html += '<div class="cal-weekdays">' + YOUBI.map(function(w, wi){ return '<div class="' + weekdayClass(wi).trim() + '">' + w + '</div>'; }).join("") + '</div>';
+
+    html += '<div class="cal-grid">';
+    for (var i = 0; i < startWd; i++){ html += '<div class="cal-cell blank"></div>'; }
+    for (var day = 1; day <= dim; day++){
+      var ds = y + "-" + pad2(mo) + "-" + pad2(day);
+      var dayMatches = byDate[ds] || [];
+      var isToday = (t2.y === y && t2.m === mo && t2.d === day);
+      var isSelected = state.ui.calSelected === ds;
+      var dots = "";
+      if (dayMatches.length){
+        dots = '<div class="cal-dots">' + dayMatches.slice(0, 3).map(function(m){
+          var st = matchStatus(m, now);
+          var cls = m.isWatched ? "watched" : (st === "live" ? "live" : "plan");
+          return '<span class="cal-dot ' + cls + '"></span>';
+        }).join("") + '</div>';
+      }
+      html += '<div class="cal-cell' + (isToday ? " today" : "") + (isSelected ? " selected" : "")
+        + '" data-action="cal-select" data-date="' + ds + '">'
+        + '<span class="cal-daynum' + (isToday ? "" : dayClass(ds)) + '">' + day + '</span>' + dots + '</div>';
+    }
+    html += '</div>';
+
+    if (state.ui.calSelected){
+      var sel = (byDate[state.ui.calSelected] || []).slice().sort(function(a,b){
+        return a.matchTime.localeCompare(b.matchTime);
+      });
+      var sp = parseYMD(state.ui.calSelected);
+      var selHol = holidayName(state.ui.calSelected);
+      html += '<div class="cal-panel">';
+      html += '<div class="cal-panel-head">' + sp.m + '月' + sp.d + '日'
+        + (selHol ? '<span class="holiday-flag">' + escapeHtml(selHol) + '</span>' : '') + '</div>';
+      if (sel.length){
+        html += '<div class="list-card">';
+        sel.forEach(function(m){
+          html += matchRowHtml(m, now, '<div class="mr-date"><div class="d num">' + escapeHtml(m.matchTime) + '</div></div>');
+        });
+        html += '</div>';
+      } else {
+        html += '<div class="cal-empty">この日の試合はありません</div>';
+      }
+      html += '<button class="btn btn-ghost btn-block" data-action="add-on-date" data-date="' + attrJs(state.ui.calSelected) + '">この日に試合を登録する</button>';
+      html += '</div>';
+    }
+
+    return html;
+  }
+
+  // ---------------- render: form ----------------
+  function renderForm(){
+    var editing = state.ui.editId ? state.matches.find(function(m){ return m.id === state.ui.editId; }) : null;
+    var prefillDate = state.ui.prefillDate || "";
+    state.ui.prefillDate = null;
+    var m = editing || { homeTeam:"", awayTeam:"", matchDate: prefillDate, matchTime:"", isWatched:false, memo:"" };
+
+    var html = '<div class="form-wrap">';
+
+    html += '<div class="field"><label>ホームチーム</label>'
+      + '<input type="text" id="f-home" list="team-list" placeholder="例：アーセナル" value="' + attrJs(teamDisplay(m.homeTeam)) + '"></div>';
+    html += '<div class="vs-divider">VS</div>';
+    html += '<div class="field"><label>アウェイチーム</label>'
+      + '<input type="text" id="f-away" list="team-list" placeholder="例：リヴァプール" value="' + attrJs(teamDisplay(m.awayTeam)) + '"></div>';
+
+    html += '<datalist id="team-list">'
+      + ["アーセナル","アストン・ヴィラ","ボーンマス","ブレントフォード","ブライトン","チェルシー",
+         "コヴェントリー・シティ","クリスタル・パレス","エヴァートン","フラム","ハル・シティ",
+         "イプスウィッチ・タウン","リーズ・ユナイテッド","リヴァプール","マンチェスター・シティ",
+         "マンチェスター・ユナイテッド","ニューカッスル・ユナイテッド","ノッティンガム・フォレスト",
+         "サンダーランド","トッテナム・ホットスパー"].map(function(t){ return '<option value="' + attrJs(t) + '">'; }).join("")
+      + '</datalist>';
+
+    html += '<div class="field"><label>試合日</label>'
+      + '<input type="date" id="f-date" value="' + attrJs(m.matchDate) + '"></div>';
+    html += '<div class="field"><label>キックオフ時間（JST）</label>'
+      + '<input type="time" id="f-time" value="' + attrJs(m.matchTime) + '"></div>';
+
+    var isPlanned = editing ? !m.isWatched : true;
+    html += '<div class="toggle-row" data-action="toggle-plan">'
+      + '<div><div class="tt">観戦予定</div><div class="ts">ONで観戦予定、OFFで観戦済みとして登録</div></div>'
+      + '<div class="switch' + (isPlanned ? ' on' : '') + '" id="f-plan-switch"><div class="knob"></div></div>'
+      + '</div>';
+
+    html += '<div class="field"><label>メモ（任意）</label>'
+      + '<textarea id="f-memo" placeholder="例：U-NEXTで観戦">' + escapeHtml(m.memo) + '</textarea></div>';
+
+    html += '<div class="form-actions">';
+    html += '<button class="btn btn-primary" style="flex:2" data-action="save-form" data-id="' + attrJs(m.id || "") + '">'
+      + (editing ? "保存する" : "登録する") + '</button>';
+    if (editing){
+      html += '<button class="btn btn-danger" data-action="delete" data-id="' + attrJs(m.id) + '">削除</button>';
+    } else {
+      html += '<button class="btn btn-ghost" data-action="nav" data-screen="home">キャンセル</button>';
+    }
+    html += '</div>';
+
+    html += '</div>';
+    return html;
+  }
+
+  // ---------------- render: players (注目選手タグ) ----------------
+  function renderPlayers(){
+    var html = '<div class="form-wrap">';
+    html += '<div class="section-label" style="padding:0 0 2px;margin-top:0;">チームに選手を登録</div>';
+    html += '<div class="field"><label>チーム</label>'
+      + '<input type="text" id="pt-team" list="team-list-2" placeholder="例：ブライトン"></div>';
+    html += '<div class="field"><label>注目選手</label>'
+      + '<input type="text" id="pt-player" placeholder="例：三笘薫"></div>';
+    html += '<datalist id="team-list-2">'
+      + ["アーセナル","アストン・ヴィラ","ボーンマス","ブレントフォード","ブライトン","チェルシー",
+         "コヴェントリー・シティ","クリスタル・パレス","エヴァートン","フラム","ハル・シティ",
+         "イプスウィッチ・タウン","リーズ・ユナイテッド","リヴァプール","マンチェスター・シティ",
+         "マンチェスター・ユナイテッド","ニューカッスル・ユナイテッド","ノッティンガム・フォレスト",
+         "サンダーランド","トッテナム・ホットスパー"].map(function(t){ return '<option value="' + attrJs(t) + '">'; }).join("")
+      + '</datalist>';
+    html += '<button class="btn btn-primary btn-block" data-action="add-tag">登録する</button>';
+    html += '</div>';
+
+    var tags = state.tags.slice().sort(function(a,b){
+      return canonicalTeamKey(a.team).localeCompare(canonicalTeamKey(b.team), "ja");
+    });
+
+    html += '<div class="section-label">登録済みの注目選手</div>';
+    if (!tags.length){
+      html += '<div class="empty">'
+        + '<div class="icon">⭐</div>'
+        + '<div class="msg">まだ注目選手が登録されていません。<br>チームに選手を登録すると、試合の表示に自動で出るようになります。</div>'
+        + '</div>';
+    } else {
+      html += '<div class="list-card">';
+      tags.forEach(function(t){
+        html += '<div class="match-row">'
+          + '<div class="mr-body">'
+          + '<div class="mr-teams">' + escapeHtml(teamDisplay(t.team)) + '</div>'
+          + '<div class="mr-meta">⭐ ' + escapeHtml(t.player) + '</div>'
+          + '</div>'
+          + '<button class="btn btn-ghost" data-action="delete-tag" data-id="' + attrJs(t.id) + '" style="padding:8px 14px;">削除</button>'
+          + '</div>';
+      });
+      html += '</div>';
+    }
+
+    return html;
+  }
+
+  // ---------------- root render ----------------
+  function render(){
+    var now = new Date();
+    var scr = state.ui.screen;
+    var body = "";
+    var title = "";
+
+    if (scr === "home"){ body = renderHome(now); title = "PL WATCHER"; }
+    else if (scr === "list"){ body = renderList(now); title = "試合一覧"; }
+    else if (scr === "form"){ body = renderForm(); title = state.ui.editId ? "試合を編集" : "試合を登録"; }
+    else if (scr === "players"){ body = renderPlayers(); title = "注目選手"; }
+
+    var html = "";
+    html += '<div class="topbar">'
+      + '<div class="brand"><span class="crest">⚽</span>' + escapeHtml(title === "PL WATCHER" ? "PL WATCHER" : title) + '</div>'
+      + (title === "PL WATCHER" ? '<div class="brand-sub">Premier League</div>' : '')
+      + '</div>';
+    html += body;
+
+    html += '<div class="navbar"><div class="navbar-inner">'
+      + navBtn("home", "🏠", "ホーム")
+      + navBtn("list", "⚽", "試合一覧")
+      + navBtn("players", "⭐", "注目選手")
+      + navBtn("form", "＋", "追加")
+      + '</div></div>';
+
+    if (state.ui.confirmDeleteId){
+      var target = state.matches.find(function(x){ return x.id === state.ui.confirmDeleteId; });
+      if (target){
+        html += '<div class="overlay" data-action="cancel-delete"><div class="sheet">'
+          + '<div class="q">この試合を削除しますか？</div>'
+          + '<div class="sub">' + escapeHtml(teamDisplay(target.homeTeam)) + ' vs ' + escapeHtml(teamDisplay(target.awayTeam)) + '</div>'
+          + '<div class="sheet-actions">'
+          + '<button class="btn btn-ghost" style="flex:1" data-action="cancel-delete">キャンセル</button>'
+          + '<button class="btn btn-danger" style="flex:1" data-action="confirm-delete" data-id="' + attrJs(target.id) + '">削除する</button>'
+          + '</div></div></div>';
+      }
+    }
+
+    if (state.ui.confirmDeleteTagId){
+      var targetTag = state.tags.find(function(x){ return x.id === state.ui.confirmDeleteTagId; });
+      if (targetTag){
+        html += '<div class="overlay" data-action="cancel-delete-tag"><div class="sheet">'
+          + '<div class="q">この登録を削除しますか？</div>'
+          + '<div class="sub">' + escapeHtml(teamDisplay(targetTag.team)) + ' - ' + escapeHtml(targetTag.player) + '</div>'
+          + '<div class="sheet-actions">'
+          + '<button class="btn btn-ghost" style="flex:1" data-action="cancel-delete-tag">キャンセル</button>'
+          + '<button class="btn btn-danger" style="flex:1" data-action="confirm-delete-tag" data-id="' + attrJs(targetTag.id) + '">削除する</button>'
+          + '</div></div></div>';
+      }
+    }
+
+    if (state.ui.toast){
+      html += '<div class="toast">' + escapeHtml(state.ui.toast) + '</div>';
+    }
+
+    document.getElementById("app").innerHTML = html;
+
+    if (state.ui.toast){
+      setTimeout(function(){ state.ui.toast = null; render(); }, 1800);
+    }
+  }
+
+  function navBtn(scr, icon, label){
+    var active = state.ui.screen === scr;
+    return '<button class="nav-btn' + (active ? ' active' : '') + '" data-action="nav" data-screen="' + scr + '">'
+      + '<span class="ic">' + icon + '</span><span>' + label + '</span></button>';
+  }
+
+  // ---------------- actions ----------------
+  function goto(screen, editId){
+    state.ui.screen = screen;
+    state.ui.editId = editId || null;
+    state.ui.confirmDeleteId = null;
+    state.ui.confirmDeleteTagId = null;
+    render();
+    window.scrollTo(0, 0);
+  }
+
+  function markWatched(id){
+    var m = state.matches.find(function(x){ return x.id === id; });
+    if (!m) return;
+    m.isWatched = true;
+    save();
+    state.ui.toast = "観戦済みにしました";
+    render();
+  }
+
+  function togglePlanSwitch(){
+    var el = document.getElementById("f-plan-switch");
+    if (!el) return;
+    el.classList.toggle("on");
+  }
+
+  function saveForm(id){
+    var home = document.getElementById("f-home").value.trim();
+    var away = document.getElementById("f-away").value.trim();
+    var date = document.getElementById("f-date").value;
+    var time = document.getElementById("f-time").value;
+    var memo = document.getElementById("f-memo").value.trim();
+    var planned = document.getElementById("f-plan-switch").classList.contains("on");
+
+    if (!home || !away || !date || !time){
+      state.ui.toast = "チーム名・日付・時間を入力してください";
+      render();
+      return;
+    }
+
+    if (id){
+      var m = state.matches.find(function(x){ return x.id === id; });
+      if (m){
+        m.homeTeam = home; m.awayTeam = away; m.matchDate = date; m.matchTime = time;
+        m.isWatched = !planned; m.memo = memo;
+      }
+    } else {
+      state.matches.push({
+        id: uid(), homeTeam: home, awayTeam: away, matchDate: date, matchTime: time,
+        isWatched: !planned, memo: memo, createdAt: new Date().toISOString()
+      });
+    }
+    save();
+    state.ui.toast = "保存しました";
+    goto("home");
+  }
+
+  function askDelete(id){
+    state.ui.confirmDeleteId = id;
+    render();
+  }
+  function cancelDelete(){
+    state.ui.confirmDeleteId = null;
+    render();
+  }
+  function confirmDelete(id){
+    state.matches = state.matches.filter(function(x){ return x.id !== id; });
+    save();
+    state.ui.confirmDeleteId = null;
+    state.ui.toast = "削除しました";
+    goto("home");
+  }
+
+  function setListTab(tab){
+    state.ui.listTab = tab;
+    render();
+  }
+  function calShiftMonth(delta){
+    if (!state.ui.calYear){
+      var t = todayJST();
+      state.ui.calYear = t.y; state.ui.calMonth = t.m;
+    }
+    var mo = state.ui.calMonth + delta;
+    var y = state.ui.calYear;
+    if (mo < 1){ mo = 12; y -= 1; }
+    else if (mo > 12){ mo = 1; y += 1; }
+    state.ui.calYear = y;
+    state.ui.calMonth = mo;
+    state.ui.calSelected = null;
+    render();
+  }
+  function calSelectDate(ds){
+    state.ui.calSelected = (state.ui.calSelected === ds) ? null : ds;
+    render();
+  }
+  function addOnDate(ds){
+    state.ui.prefillDate = ds;
+    goto("form");
+  }
+
+  function addTag(){
+    var teamEl = document.getElementById("pt-team");
+    var playerEl = document.getElementById("pt-player");
+    var team = teamEl.value.trim();
+    var player = playerEl.value.trim();
+    if (!team || !player){
+      state.ui.toast = "チーム名と選手名を入力してください";
+      render();
+      return;
+    }
+    state.tags.push({ id: uid(), team: team, player: player });
+    saveTags();
+    state.ui.toast = "登録しました";
+    render();
+  }
+  function askDeleteTag(id){
+    state.ui.confirmDeleteTagId = id;
+    render();
+  }
+  function cancelDeleteTag(){
+    state.ui.confirmDeleteTagId = null;
+    render();
+  }
+  function confirmDeleteTag(id){
+    state.tags = state.tags.filter(function(x){ return x.id !== id; });
+    saveTags();
+    state.ui.confirmDeleteTagId = null;
+    state.ui.toast = "削除しました";
+    render();
+  }
+
+  // ---------------- event delegation ----------------
+  document.addEventListener("click", function(e){
+    var el = e.target.closest("[data-action]");
+    if (!el) return;
+    var action = el.getAttribute("data-action");
+    var id = el.getAttribute("data-id");
+
+    if (action === "nav"){
+      goto(el.getAttribute("data-screen"));
+    } else if (action === "edit"){
+      goto("form", id);
+    } else if (action === "mark-watched"){
+      markWatched(id);
+    } else if (action === "toggle-plan"){
+      togglePlanSwitch();
+    } else if (action === "save-form"){
+      saveForm(id || null);
+    } else if (action === "delete"){
+      askDelete(id);
+    } else if (action === "cancel-delete"){
+      cancelDelete();
+    } else if (action === "confirm-delete"){
+      confirmDelete(id);
+    } else if (action === "list-tab"){
+      setListTab(el.getAttribute("data-tab"));
+    } else if (action === "cal-prev"){
+      calShiftMonth(-1);
+    } else if (action === "cal-next"){
+      calShiftMonth(1);
+    } else if (action === "cal-select"){
+      calSelectDate(el.getAttribute("data-date"));
+    } else if (action === "add-on-date"){
+      addOnDate(el.getAttribute("data-date"));
+    } else if (action === "add-tag"){
+      addTag();
+    } else if (action === "delete-tag"){
+      askDeleteTag(id);
+    } else if (action === "cancel-delete-tag"){
+      cancelDeleteTag();
+    } else if (action === "confirm-delete-tag"){
+      confirmDeleteTag(id);
+    }
+  });
+
+  // 分単位でカウントダウン等を更新（ホーム画面表示中のみ）
+  setInterval(function(){
+    if (state.ui.screen === "home" && !state.ui.confirmDeleteId){
+      render();
+    }
+  }, 30000);
+  document.addEventListener("visibilitychange", function(){
+    if (!document.hidden) render();
+  });
+
+  // ---------------- init ----------------
+  load();
+  render();
+})();
+</script>
+</body>
+</html>
